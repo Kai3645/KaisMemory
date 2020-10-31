@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from Core.Basic.KaisFunc import num2str
 from Core.Basic.KaisPara import KaisPara
-from Core.ComputerVision.camera_basic import calibration_digital_camera, camera_pose2checkboard
+from Core.ComputerVision.camera_basic import calibration_digCamera, pose2checkboard_digCamera
 
 if __name__ == '__main__':
 	folder = KaisPara.iCloud + "Code/python/Sample/camera_basic/"
@@ -28,14 +28,14 @@ if __name__ == '__main__':
 		imgs.append(img)
 		names.append(p.split(".")[0])
 
-	cam_para = calibration_digital_camera(imgs, board_size, board_dx)
+	cam_para = calibration_digCamera(imgs, board_size, board_dx)
 	with open(folder + "iPhone8/calibrate_output/_calib.txt", "w") as fw:
 		fw.write("fx, fy, cx, cy = " + num2str(cam_para, 2, separator = ", ") + "\n")
 
 	sum_dis, count = 0, 0
 	fw = open(folder_output + "_dis.csv", "w")
 	for i, name in enumerate(tqdm(names, ">> calculating: ")):
-		pos, rot, cam_para = camera_pose2checkboard(
+		pos, rot, cam_para = pose2checkboard_digCamera(
 			src = imgs[i],
 			camera_para = cam_para,
 			board_size = board_size,

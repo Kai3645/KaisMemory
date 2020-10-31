@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from Core.Basic.KaisFunc import num2str
 from Core.Basic.KaisPara import KaisPara
-from Core.ComputerVision.camera_basic import camera_pose2checkboard
+from Core.ComputerVision.camera_basic import pose2checkboard_digCamera
 
 if __name__ == '__main__':
 	folder = KaisPara.iCloud + "Code/python/Sample/camera_basic/"
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
 	fw = open(folder_output + "_dis.csv", "w")
 	for i, name in enumerate(tqdm(names, ">> calculating: ")):
-		pos, rot, mat = camera_pose2checkboard(
+		pos, rot, mat = pose2checkboard_digCamera(
 			src = imgs[i],
 			camera_para = cam_para,
 			board_size = board_size,

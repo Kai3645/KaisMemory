@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 from Core.Basic.KaisFunc import num2str
 from Core.Basic.KaisPara import KaisPara
-from Core.ComputerVision.camera_basic import camera_pose2checkboard
+from Core.ComputerVision.camera_basic import pose2checkboard_digCamera
 from Core.Math_geometry.geometry3d import fit_plane
 
 if __name__ == '__main__':
@@ -30,7 +30,7 @@ if __name__ == '__main__':
 	loop_control = 0
 	while loop_control < 10:
 		for i in tqdm(range(total), ">> calculating: "):
-			pos, rot, _ = camera_pose2checkboard(
+			pos, rot, _ = pose2checkboard_digCamera(
 				src = imgs[i],
 				camera_para = cam_para,
 				board_size = board_size,
@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
 	fw = open(folder_output + "_result.csv", "w")
 	for i in tqdm(range(total), ">> calculating: "):
-		pos, rot, mat = camera_pose2checkboard(
+		pos, rot, mat = pose2checkboard_digCamera(
 			src = imgs[i],
 			camera_para = cam_para,
 			board_size = board_size,
