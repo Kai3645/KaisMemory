@@ -3,8 +3,8 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 
 public class Main extends JFrame {
-    static final int board_width = 720;
-    static final int board_height = 405;
+    static final int board_width = 1280;
+    static final int board_height = 720;
     static final int board_edge = 20;
 
     static final int global_width = board_width + 2 * board_edge;
