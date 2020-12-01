@@ -35,7 +35,7 @@ class Action {
                 bfI.setRGB(x, y, p);
             }
         }
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
         g.drawImage(bfI, 0, 0, Main.board_width, Main.board_height, null);
     }
 
