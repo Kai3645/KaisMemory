@@ -3,7 +3,7 @@ import java.awt.*;
 public class MyObject {
     final float center_X = 0.5f * Main.board_width;
     final float center_Y = 0.5f * Main.board_height;
-    final float point_size = 6.5f;
+    final float point_size = 5.0f;
     final int point_size2 = (int) point_size * 2;
     final double NUM_ERR = 1e-10;
 
@@ -11,7 +11,7 @@ public class MyObject {
     final double V = 1.0;
     final double K = 4.5;
 
-    final double rate = 0.95 * center_Y / R;
+    final double rate = 0.9 * center_Y / R;
 
     // (dis, angle)
     double[] A = {0, 0};
@@ -103,14 +103,14 @@ public class MyObject {
     public void draw(Graphics2D g) {
         int[] pointA = func(A);
         int[] pointB = func(B);
-        g.setStroke(new BasicStroke(1.3f));
+        g.setStroke(new BasicStroke(1.8f));
         g.setColor(new Color(100, 100, 100));
         g.drawOval((int) Math.round(center_X - R * rate), (int) Math.round(center_Y - R * rate), R2, R2);
         g.drawOval((int) Math.round(center_X - r * rate), (int) Math.round(center_Y - r * rate), r2, r2);
 
-        g.setColor(new Color(200, 10, 30));
+        g.setColor(new Color(40, 130, 250));
         g.fillOval(pointA[0], pointA[1], point_size2, point_size2);
-        g.setColor(new Color(20, 130, 220));
+        g.setColor(new Color(210, 10, 30));
         g.fillOval(pointB[0], pointB[1], point_size2, point_size2);
 
     }

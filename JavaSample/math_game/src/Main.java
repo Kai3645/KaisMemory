@@ -5,9 +5,9 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 
 public class Main extends JFrame implements ActionListener {
-    static final int board_width = 800;
-    static final int board_height = 600;
-    static final int board_edge = 20;
+    static final int board_width = 300;
+    static final int board_height = 250;
+    static final int board_edge = 10;
 
     static final int global_width = board_width + 2 * board_edge;
     static final int global_height = board_height + 2 * board_edge;
@@ -28,9 +28,9 @@ public class Main extends JFrame implements ActionListener {
                 size_offset_w = 0;
                 size_offset_h = 37;
             }
-            case "MacOS" -> {
+            case "Mac OS X" -> {
                 size_offset_w = 0;
-                size_offset_h = 22;
+                size_offset_h = 28;
             }
             default -> {
                 size_offset_w = 10;
