@@ -5,9 +5,9 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 
 public class Main extends JFrame implements ActionListener {
-    static final int board_width = 300;
-    static final int board_height = 250;
-    static final int board_edge = 10;
+    static final int board_width = 800;
+    static final int board_height = 600;
+    static final int board_edge = 20;
 
     static final int global_width = board_width + 2 * board_edge;
     static final int global_height = board_height + 2 * board_edge;
@@ -62,7 +62,7 @@ public class Main extends JFrame implements ActionListener {
         setVisible(true);
         setResizable(false);
 
-        timer = new Timer(0, this);
+        timer = new Timer(20, this);
         timer.start();
 
         panel.repaint();

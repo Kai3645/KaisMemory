@@ -3,28 +3,34 @@ import java.awt.*;
 public class MyObject {
     final float center_X = 0.5f * Main.board_width;
     final float center_Y = 0.5f * Main.board_height;
-    final float point_size = 5.0f;
-    final int point_size2 = (int) point_size * 2;
-    final double NUM_ERR = 1e-10;
+    final int point_size = 6;
+    final int point_size2 = point_size * 2;
+    final double NUM_ERR = 1e-9;
 
-    final double R = 5.0;
+    final double R = 4.0;
     final double V = 1.0;
-    final double K = 4.5;
+    final double K = 4.2;
+
+    final double dt = 0.1;
+    final double Vdt = V * dt;
+    final double wdt = K * Vdt / R;
 
     final double rate = 0.9 * center_Y / R;
 
     // (dis, angle)
     double[] A = {0, 0};
     double[] B = {R, Math.PI};
-    //    final double r = Math.max(0.0, 1 - Math.PI / K) * R; // fastest
+    // final double r = Math.max(0.0, 1 - Math.PI / K) * R; // fastest
     final double r = R / K; // most safe
 
     final int R2 = (int) Math.round(R * 2 * rate);
     final int r2 = (int) Math.round(r * 2 * rate);
 
-    final double dt = 0.005;
-    final double Vdt = V * dt;
-    final double wdt = K * Vdt / R;
+
+    final int idx_len = 100;
+    int[][] points;
+    int p_idx = 0;
+
 
     double unwrap_angle(double a, double ref) {
         double pi2 = Math.PI * 2;
@@ -40,7 +46,7 @@ public class MyObject {
             Ai[0] -= Vdt;
             return Ai;
         }
-        if (Ai[0] >= r) {
+        if (Ai[0] > r) {
             Ai[0] += Vdt;
             return Ai;
         }
@@ -81,6 +87,11 @@ public class MyObject {
     public MyObject() {
         System.out.println(">> initiating .. ");
 //        if (K * r > R) System.err.println("bad, case");
+        points = new int[idx_len][2];
+        for (int i = 0; i < idx_len; i++) {
+            points[i][0] = Math.round(center_X);
+            points[i][1] = Math.round(center_Y);
+        }
         System.out.println(">> initiated");
     }
 
@@ -97,12 +108,34 @@ public class MyObject {
         } else {
             A[0] = Math.random() * r;
             A[1] = Math.random() * Math.PI * 2;
+            points = new int[idx_len][2];
+            points[0][0] = (int) Math.round(center_X + A[0] * Math.cos(A[1]) * rate);
+            points[0][1] = (int) Math.round(center_Y - A[0] * Math.sin(A[1]) * rate);
+            for (int i = 1; i < idx_len; i++) {
+                points[i][0] = points[0][0];
+                points[i][1] = points[0][1];
+            }
+            p_idx = 0;
         }
     }
 
     public void draw(Graphics2D g) {
+        points[p_idx][0] = (int) Math.round(center_X + A[0] * Math.cos(A[1]) * rate);
+        points[p_idx][1] = (int) Math.round(center_Y - A[0] * Math.sin(A[1]) * rate);
+        p_idx = (p_idx + 1) % idx_len;
+        g.setStroke(new BasicStroke(1.0f));
+        g.setColor(new Color(180, 180, 30));
+        for (int i = (p_idx + 2) % idx_len; i != p_idx; i = (i + 1) % idx_len) {
+            int j = (i + idx_len - 1) % idx_len;
+            g.drawLine(points[i][0], points[i][1], points[j][0], points[j][1]);
+        }
+
         int[] pointA = func(A);
         int[] pointB = func(B);
+
+        g.setColor(new Color(10, 150, 30));
+        g.drawLine(pointA[0] + point_size, pointA[1] + point_size, pointB[0] + point_size, pointB[1] + point_size);
+
         g.setStroke(new BasicStroke(1.8f));
         g.setColor(new Color(100, 100, 100));
         g.drawOval((int) Math.round(center_X - R * rate), (int) Math.round(center_Y - R * rate), R2, R2);
