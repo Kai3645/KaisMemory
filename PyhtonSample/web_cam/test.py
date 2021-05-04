@@ -1,19 +1,27 @@
 import cv2
 
-from Core.Basic import err_exit
-
 
 def main():
-	capture = cv2.VideoCapture(2)
-	capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-	capture.set(cv2.CAP_PROP_FOCUS, 0)
-	# capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-	print(capture.isOpened())
-	if not capture.isOpened(): err_exit("err, video not open ..")
-	for i in range(10):
-		ret, img = capture.read()
-		cv2.imshow("", img)
-		cv2.waitKey()
+	cap = cv2.VideoCapture(0)
+
+	# cv2.namedWindow("cam", cv2.WINDOW_AUTOSIZE)
+	cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+	# cap.set(cv2.CAP_PROP_FOCUS, 0)
+
+	if not cap.isOpened():
+		print(">> err, can not open camera ..")
+		exit(-1)
+
+	is_running = True
+	while is_running:
+		ret, img = cap.read()
+
+		if ret:
+			cv2.imshow("cam", img)
+			if cv2.waitKey(1) == 27:
+				is_running = False
+				print(">> exit ..")
+		else: print(">> camera short circuit")
 	pass
 
 
