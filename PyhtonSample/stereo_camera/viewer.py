@@ -6,8 +6,8 @@ import numpy as np
 
 
 def main():
-	cap_L = cv2.VideoCapture(3)
-	cap_R = cv2.VideoCapture(0)
+	cap_L = cv2.VideoCapture(0)
+	cap_R = cv2.VideoCapture(3)
 	# cap_L.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 	# cap_R.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 	# cap_L.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -19,8 +19,8 @@ def main():
 		print(">> err, can not open camera ..")
 		exit(-1)
 
-	display_W = 400
-	display_H = 225
+	display_W = 640
+	display_H = 360
 	display = np.zeros((display_H * 3, display_W * 3, 3), np.uint8)
 
 	def multi_display(images):
@@ -49,6 +49,7 @@ def main():
 				imgs[0] = img
 				imgs[1] = gray
 				thread_lock.release()
+
 		pass
 
 	class StaffR(threading.Thread):
@@ -61,6 +62,7 @@ def main():
 				imgs[3] = img
 				imgs[4] = gray
 				thread_lock.release()
+
 		pass
 
 	t0 = time.time()
@@ -79,6 +81,7 @@ def main():
 			imgs[6] = (imgs[0] / 2 + imgs[3] / 2).astype(np.uint8)
 			imgs[7] = (imgs[1] / 2 + imgs[4] / 2).astype(np.uint8)
 			imgs[8] = np.abs(np.asarray(imgs[1], int) - imgs[4]).astype(np.uint8)
+			imgs[8][imgs[8] < 50] = 0
 
 			cv2.imshow("cam", multi_display(imgs))
 			if cv2.waitKey(1) == 27:
