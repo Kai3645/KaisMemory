@@ -109,7 +109,7 @@ if __name__ == '__main__':
 	fw.write("L distCoeffs = \n\t" + num2str(dist_L, 8) + "\n")
 	fw.write("L camera mat = \n\t" + num2str(mat_L, 4) + "\n")
 	fw.write("R distCoeffs = \n\t" + num2str(dist_R, 8) + "\n")
-	fw.write("R camera mat = \n\t" + num2str(mat_L, 4) + "\n")
+	fw.write("R camera mat = \n\t" + num2str(mat_R, 4) + "\n")
 	fw.write("R = \n\t" + num2str(R, 8) + "\n")
 	fw.write("T = \n\t" + num2str(T, 4) + "\n")
 	fw.close()
