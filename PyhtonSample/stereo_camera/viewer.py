@@ -42,7 +42,7 @@ def main():
 	def func_L():
 		ret, img = cap_L.read()
 		if ret:
-			img = cv2.remap(img[::-1, ::-1], map1_1, map1_2, cv2.INTER_LINEAR_EXACT)
+			img = cv2.remap(img[::-1, ::-1], map1_1, map1_2, cv2.INTER_LINEAR)
 			if mix_image: img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 			else: img = cv2.resize(img, (640, 720), interpolation = cv2.INTER_CUBIC)
 		value_L[:] = ret, img
@@ -50,7 +50,7 @@ def main():
 	def func_R():
 		ret, img = cap_R.read()
 		if ret:
-			img = cv2.remap(img[::-1, ::-1], map2_1, map2_2, cv2.INTER_LINEAR_EXACT)
+			img = cv2.remap(img[::-1, ::-1], map2_1, map2_2, cv2.INTER_LINEAR)
 			if mix_image: img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 			else: img = cv2.resize(img, (640, 720), interpolation = cv2.INTER_CUBIC)
 		value_R[:] = ret, img
@@ -72,9 +72,10 @@ def main():
 				result = np.abs(img_l.astype(int) - img_r).astype(np.uint8)
 			else:
 				result = np.concatenate((img_l, img_r), axis = 1)
+				result[20::47, :, 1] = 250
 			cv2.imshow("cam", result)
 		else: print(">> camera short circuit")
-		key = cv2.waitKey(1)
+		key = cv2.waitKey(200)
 		if key == 27: break
 		if key == "p": mix_image = not mix_image
 		fps = loop / (time.time() - t0)
