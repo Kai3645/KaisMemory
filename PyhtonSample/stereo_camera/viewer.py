@@ -25,6 +25,22 @@ def main():
 	map1_1, map1_2 = cv2.initUndistortRectifyMap(mat_L, dist_L, R1, P1, image_shape, cv2.CV_16SC2)
 	map2_1, map2_2 = cv2.initUndistortRectifyMap(mat_R, dist_R, R2, P2, image_shape, cv2.CV_16SC2)
 
+	window_size = 3
+	min_disp = 16
+	num_disp = 100 - min_disp
+	stereo = cv2.StereoSGBM_create(
+		minDisparity = min_disp,
+		numDisparities = num_disp,
+		blockSize = 16,
+		P1 = 8 * 3 * window_size ** 2,
+		P2 = 32 * 3 * window_size ** 2,
+		disp12MaxDiff = 1,
+		uniquenessRatio = 8,
+		speckleWindowSize = 80,
+		speckleRange = 16,
+		mode = cv2.STEREO_SGBM_MODE_HH,
+	)
+
 	cap_L = cv2.VideoCapture(0)
 	cap_R = cv2.VideoCapture(3)
 
@@ -39,22 +55,31 @@ def main():
 
 	mix_image = False
 
+	def process(img, head):
+		if shot_frame: cv2.imwrite(folder + head + f"{loop:05d}.jpg", img)
+		if mix_image:
+			img = cv2.resize(img, None, fx = 0.5, fy = 0.5, interpolation = cv2.INTER_CUBIC)
+			img = cv2.fastNlMeansDenoisingColored(img, None, 4, 5, 5, 21)
+			return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+		return img
+
 	def func_L():
 		ret, img = cap_L.read()
 		if ret:
 			img = cv2.remap(img[::-1, ::-1], map1_1, map1_2, cv2.INTER_CUBIC)
+			img = process(img, "L")
 		value_L[:] = ret, img
 
 	def func_R():
 		ret, img = cap_R.read()
 		if ret:
 			img = cv2.remap(img[::-1, ::-1], map2_1, map2_2, cv2.INTER_CUBIC)
+			img = process(img, "R")
 		value_R[:] = ret, img
 
 	loop = 1
 	t0 = time.time()
 	shot_frame = False
-	gray_th = 1
 	folder = mkdir("/Users/kaismac/Downloads/stereo_camera", "depth_sample")
 	while True:
 		staff_L = Thread(target = func_L)
@@ -63,36 +88,33 @@ def main():
 		staff_R.start()
 		staff_L.join()
 		staff_R.join()
+		if shot_frame: shot_frame = False
 
 		if value_L[0] and value_R[0]:
 			img_l = value_L[1]
 			img_r = value_R[1]
-			if shot_frame:
-				cv2.imwrite(folder + f"L{loop:05d}.jpg", img_l)
-				cv2.imwrite(folder + f"R{loop:05d}.jpg", img_r)
-				shot_frame = False
 			if mix_image:
-				img_l = cv2.cvtColor(img_l, cv2.COLOR_BGR2GRAY)
-				img_r = cv2.cvtColor(img_r, cv2.COLOR_BGR2GRAY)
-				gray_max = min(255, gray_th + 20)
-				result = np.abs(img_l.astype(int) - img_r)
-				result[result > gray_max] = gray_max
-				result[result < gray_th] = 0
-				result = (result * (255 / gray_max)).astype(np.uint8)
-				result = result[::2, ::2]
+				disp = stereo.compute(img_l, img_r).astype(np.float32) / 16.0
+				valid = disp > max(disp.min(), 0)
+
+				depth_image = np.round(disp * (255 / disp.max()))
+				depth_image[np.logical_not(valid)] = 0
+				depth_image.astype(np.uint8)
+				# depth_image = cv2.resize(depth_image, image_shape, interpolation = cv2.INTER_CUBIC)
+				result = depth_image.astype(np.uint8)
 			else:
 				result = np.concatenate((img_l, img_r), axis = 1)[::2, ::4]
-				result[25::53, :, 1] = 250
+				result[25::56, :, 1] = 200
 			cv2.imshow("cam", result)
 		else: print(">> camera short circuit")
+
 		key = cv2.waitKey(1)
 		if key == 27: break
 		if key == ord("m"): mix_image = not mix_image
 		if key == ord("s"): shot_frame = True
-		if key == ord("["): gray_th = max(1, gray_th - 1)
-		if key == ord("]"): gray_th = min(250, gray_th + 1)
+
 		fps = loop / (time.time() - t0)
-		print(f"{loop}, fps = {fps:.1f}, gray th = {gray_th}")
+		print(f"{loop}, fps = {fps:.1f}")
 		loop += 1
 	print(">> process finished ..")
 	pass
