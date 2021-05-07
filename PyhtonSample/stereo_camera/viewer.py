@@ -1,11 +1,12 @@
+import threading
 import time
 from threading import Thread
 
 import cv2
 import numpy as np
+from scipy.stats import stats
 
-from Core.Basic import mkdir
-from Core.Visualization import KaisCanvas
+from Core.Basic import mkdir, err_exit
 
 
 def main():
@@ -21,14 +22,18 @@ def main():
 	T = np.asarray([-0.0623, 0.0002, -0.0003]).reshape([3, 1])
 
 	image_shape = (1280, 720)
+	resize_w = 640
+	resize_h = 360
+	resize_shape = (resize_w, resize_h)
 
 	R1, R2, P1, P2, Q, _, _ = cv2.stereoRectify(mat_L, dist_L, mat_R, dist_R, image_shape, R, T, alpha = 0)
 	map1_1, map1_2 = cv2.initUndistortRectifyMap(mat_L, dist_L, R1, P1, image_shape, cv2.CV_16SC2)
 	map2_1, map2_2 = cv2.initUndistortRectifyMap(mat_R, dist_R, R2, P2, image_shape, cv2.CV_16SC2)
 
-	window_size = 3
-	min_disp = 16
-	num_disp = 100 - min_disp
+	window_size = 5
+	min_disp = 2
+	depth_offset = 54
+	num_disp = depth_offset - min_disp
 	stereo = cv2.StereoSGBM_create(
 		minDisparity = min_disp,
 		numDisparities = num_disp,
@@ -36,56 +41,80 @@ def main():
 		P1 = 8 * 3 * window_size ** 2,
 		P2 = 32 * 3 * window_size ** 2,
 		disp12MaxDiff = 1,
-		uniquenessRatio = 8,
-		speckleWindowSize = 80,
+		uniquenessRatio = 10,
+		speckleWindowSize = 100,
 		speckleRange = 16,
 		mode = cv2.STEREO_SGBM_MODE_HH,
 	)
 
-	cap_L = cv2.VideoCapture(0)
-	cap_R = cv2.VideoCapture(3)
-
-	if cap_L.isOpened() and cap_R.isOpened():
-		print(">> cameras start ..")
-	else:
-		print(">> err, can not open camera ..")
-		exit(-1)
-
 	value_L = np.empty(2, object)
 	value_R = np.empty(2, object)
+	gray_L_old = np.zeros((resize_h, resize_w), np.uint8)
+	gray_R_old = np.zeros((resize_h, resize_w), np.uint8)
 
 	mix_image = False
 	gray_mode = False
 
 	loop = 1
-	t0 = time.time()
 	shot_frame = False
 	folder_out = "/Users/kaismac/Downloads/stereo_camera/"
 	folder_depth = mkdir(folder_out, "depth_sample")
 
-	def process(img, head):
+	gray_diff_th = 20
+	CHANGE_RATIO = 0.2
+	change_th = resize_w * resize_h * CHANGE_RATIO
+
+	cap_L = cv2.VideoCapture(0)
+	cap_R = cv2.VideoCapture(3)
+	if cap_L.isOpened() and cap_R.isOpened(): print(">> cameras start ..")
+	else: err_exit(">> err, can not open camera ..")
+
+	def process(img, head, gray_old):
 		if shot_frame: cv2.imwrite(folder_depth + head + f"{loop:05d}.jpg", img)
-		if mix_image or gray_mode:
-			img = cv2.resize(img, None, fx = 0.5, fy = 0.5, interpolation = cv2.INTER_CUBIC)
-			img = cv2.fastNlMeansDenoisingColored(img, None, 4, 5, 5, 21)
-			return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-		return img
+		img = cv2.resize(img, resize_shape, interpolation = cv2.INTER_LINEAR)
+		gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+		gray = cv2.medianBlur(gray, 3)
+		if mix_image:
+			diff = cv2.absdiff(gray, gray_old)
+			th = stats.mode(diff, axis = None)[0][0]
+			diff_valid = diff > th + gray_diff_th
+			if gray_mode:
+				diff[np.logical_not(diff_valid)] = 0
+				return diff, gray
+
+			if np.sum(diff_valid) > change_th: return None, gray
+			return gray, gray
+		elif gray_mode: return gray, gray
+		return img, gray
 
 	def func_L():
 		ret, img = cap_L.read()
 		if ret:
 			img = cv2.remap(img[::-1, ::-1], map1_1, map1_2, cv2.INTER_CUBIC)
-			img = process(img, "L")
+			img, gray = process(img, "L", gray_L_old)
+			gray_L_old[:, :] = gray
 		value_L[:] = ret, img
 
 	def func_R():
 		ret, img = cap_R.read()
 		if ret:
 			img = cv2.remap(img[::-1, ::-1], map2_1, map2_2, cv2.INTER_CUBIC)
-			img = process(img, "R")
+			img, gray = process(img, "R", gray_R_old)
+			gray_R_old[:, :] = gray
 		value_R[:] = ret, img
 
+	t_ = time.time()
+	result = np.zeros((resize_h, resize_w, 3), np.uint8)
 	while True:
+		cv2.imshow("stereo", result)
+		key = cv2.waitKey(1)
+		if key == 27: break
+		if key == ord("s"): shot_frame = True
+		if key == ord("m"): mix_image = not mix_image
+		if key == ord("g"): gray_mode = not gray_mode
+		if key == ord("["): gray_diff_th = max(1, gray_diff_th - 1)
+		if key == ord("]"): gray_diff_th = min(50, gray_diff_th + 1)
+
 		staff_L = Thread(target = func_L)
 		staff_R = Thread(target = func_R)
 		staff_L.start()
@@ -93,45 +122,51 @@ def main():
 		staff_L.join()
 		staff_R.join()
 		if shot_frame: shot_frame = False
-		key = cv2.waitKey(1)
 
-		if value_L[0] and value_R[0]:
-			img_l = value_L[1]
-			img_r = value_R[1]
-			if mix_image:
+		ti = time.time()
+		fps = 1 / (ti - t_)
+		t_ = ti
+		print(f"{loop}, fps = {fps:.1f}")
+		buffer_old = result
+		loop += 1
+
+		if not value_L[0] or not value_R[0]:
+			print(">> camera short circuit")
+			continue
+		if value_L[1] is None:
+			result = buffer_old
+			continue
+		if value_R[1] is None:
+			result = buffer_old
+			continue
+
+		img_l = value_L[1]
+		img_r = value_R[1]
+
+		if mix_image:
+			if gray_mode:
+				img_l = cv2.cvtColor(img_l, cv2.COLOR_GRAY2BGR)
+				img_r = cv2.cvtColor(img_r, cv2.COLOR_GRAY2BGR)
+			else:
 				disp = stereo.compute(img_l, img_r).astype(np.float32) / 16.0
 				valid = disp > max(disp.min(), 0)
 
-				depth_image = np.round(disp * (255 / disp.max()))
+				depth_image = np.round(disp * (255 / disp.max())).astype(np.uint8)
 				depth_image[np.logical_not(valid)] = 0
-				depth_image.astype(np.uint8)
-				# depth_image = cv2.resize(depth_image, image_shape, interpolation = cv2.INTER_CUBIC)
-				result = depth_image.astype(np.uint8)
-				key = cv2.waitKey(0)
-			elif gray_mode:
-				gray = np.abs(np.asarray(img_l, np.int) - img_r)
-				result = gray.astype(np.uint8)
-				fig = KaisCanvas(fig_size = (10, 5.7), linewidth = 1, dark_mode = False)
-				fig.histogram(np.ravel(gray), 2, force_delta = True, show_fit = False)
-				fig.set_axis(equal_axis = False)
-				path = folder_out + "hist_gray.png"
-				fig.save(path)
-				hist = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-				cv2.imshow("hist", hist)
-			else:
-				result = np.concatenate((img_l, img_r), axis = 1)[::2, ::4]
-				result[25::56, :, 1] = 200
-			cv2.imshow("cam", result)
-		else: print(">> camera short circuit")
+				result = cv2.resize(depth_image[:, depth_offset:], resize_shape, interpolation = cv2.INTER_CUBIC)
+				continue
+		elif gray_mode:
+			gray_diff = cv2.absdiff(img_l, img_r)
+			diff_th = stats.mode(gray_diff, axis = None)[0][0]
+			max_gary = diff_th + gray_diff_th
+			gray_diff = gray_diff.astype(np.float32)
+			gray_diff[gray_diff > max_gary] = 0
+			gray_diff *= 250 / max_gary
+			result = gray_diff.astype(np.uint8)
+			continue
 
-		if key == 27: break
-		if key == ord("m"): mix_image = not mix_image
-		if key == ord("s"): shot_frame = True
-		if key == ord("g"): gray_mode = True
-
-		fps = loop / (time.time() - t0)
-		print(f"{loop}, fps = {fps:.1f}")
-		loop += 1
+		result = np.concatenate((img_l, img_r), axis = 1)[::, ::2]
+		result[25::56, :, 1] = 100
 	print(">> process finished ..")
 	pass
 
