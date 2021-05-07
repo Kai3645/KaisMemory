@@ -4,6 +4,8 @@ from threading import Thread
 import cv2
 import numpy as np
 
+from Core.Basic import mkdir
+
 
 def main():
 	mat_L = np.asarray([371.7238, 0.0000, 603.0837, 0.0000, 371.6990, 349.0501, 0.0000, 0.0000, 1.0000]).reshape([3, 3])
@@ -40,21 +42,20 @@ def main():
 	def func_L():
 		ret, img = cap_L.read()
 		if ret:
-			img = cv2.remap(img[::-1, ::-1], map1_1, map1_2, cv2.INTER_LINEAR)
-			if mix_image: img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-			else: img = cv2.resize(img, (640, 720), interpolation = cv2.INTER_CUBIC)
+			img = cv2.remap(img[::-1, ::-1], map1_1, map1_2, cv2.INTER_CUBIC)
 		value_L[:] = ret, img
 
 	def func_R():
 		ret, img = cap_R.read()
 		if ret:
-			img = cv2.remap(img[::-1, ::-1], map2_1, map2_2, cv2.INTER_LINEAR)
-			if mix_image: img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-			else: img = cv2.resize(img, (640, 720), interpolation = cv2.INTER_CUBIC)
+			img = cv2.remap(img[::-1, ::-1], map2_1, map2_2, cv2.INTER_CUBIC)
 		value_R[:] = ret, img
 
 	loop = 1
 	t0 = time.time()
+	shot_frame = False
+	gray_th = 1
+	folder = mkdir("/Users/kaismac/Downloads/stereo_camera", "depth_sample")
 	while True:
 		staff_L = Thread(target = func_L)
 		staff_R = Thread(target = func_R)
@@ -66,18 +67,32 @@ def main():
 		if value_L[0] and value_R[0]:
 			img_l = value_L[1]
 			img_r = value_R[1]
+			if shot_frame:
+				cv2.imwrite(folder + f"L{loop:05d}.jpg", img_l)
+				cv2.imwrite(folder + f"R{loop:05d}.jpg", img_r)
+				shot_frame = False
 			if mix_image:
-				result = np.abs(img_l.astype(int) - img_r).astype(np.uint8)
+				img_l = cv2.cvtColor(img_l, cv2.COLOR_BGR2GRAY)
+				img_r = cv2.cvtColor(img_r, cv2.COLOR_BGR2GRAY)
+				gray_max = min(255, gray_th + 20)
+				result = np.abs(img_l.astype(int) - img_r)
+				result[result > gray_max] = gray_max
+				result[result < gray_th] = 0
+				result = (result * (255 / gray_max)).astype(np.uint8)
+				result = result[::2, ::2]
 			else:
-				result = np.concatenate((img_l, img_r), axis = 1)
-				result[20::47, :, 1] = 250
+				result = np.concatenate((img_l, img_r), axis = 1)[::2, ::4]
+				result[25::53, :, 1] = 250
 			cv2.imshow("cam", result)
 		else: print(">> camera short circuit")
-		key = cv2.waitKey(200)
+		key = cv2.waitKey(1)
 		if key == 27: break
-		if key == "p": mix_image = not mix_image
+		if key == ord("m"): mix_image = not mix_image
+		if key == ord("s"): shot_frame = True
+		if key == ord("["): gray_th = max(1, gray_th - 1)
+		if key == ord("]"): gray_th = min(250, gray_th + 1)
 		fps = loop / (time.time() - t0)
-		print(f"{loop}, fps = {fps:.1f}")
+		print(f"{loop}, fps = {fps:.1f}, gray th = {gray_th}")
 		loop += 1
 	print(">> process finished ..")
 	pass
