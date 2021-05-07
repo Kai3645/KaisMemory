@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 
 from Core.Basic import mkdir
+from Core.Visualization import KaisCanvas
 
 
 def main():
@@ -54,10 +55,17 @@ def main():
 	value_R = np.empty(2, object)
 
 	mix_image = False
+	gray_mode = False
+
+	loop = 1
+	t0 = time.time()
+	shot_frame = False
+	folder_out = "/Users/kaismac/Downloads/stereo_camera/"
+	folder_depth = mkdir(folder_out, "depth_sample")
 
 	def process(img, head):
-		if shot_frame: cv2.imwrite(folder + head + f"{loop:05d}.jpg", img)
-		if mix_image:
+		if shot_frame: cv2.imwrite(folder_depth + head + f"{loop:05d}.jpg", img)
+		if mix_image or gray_mode:
 			img = cv2.resize(img, None, fx = 0.5, fy = 0.5, interpolation = cv2.INTER_CUBIC)
 			img = cv2.fastNlMeansDenoisingColored(img, None, 4, 5, 5, 21)
 			return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -77,10 +85,6 @@ def main():
 			img = process(img, "R")
 		value_R[:] = ret, img
 
-	loop = 1
-	t0 = time.time()
-	shot_frame = False
-	folder = mkdir("/Users/kaismac/Downloads/stereo_camera", "depth_sample")
 	while True:
 		staff_L = Thread(target = func_L)
 		staff_R = Thread(target = func_R)
@@ -89,6 +93,7 @@ def main():
 		staff_L.join()
 		staff_R.join()
 		if shot_frame: shot_frame = False
+		key = cv2.waitKey(1)
 
 		if value_L[0] and value_R[0]:
 			img_l = value_L[1]
@@ -102,16 +107,27 @@ def main():
 				depth_image.astype(np.uint8)
 				# depth_image = cv2.resize(depth_image, image_shape, interpolation = cv2.INTER_CUBIC)
 				result = depth_image.astype(np.uint8)
+				key = cv2.waitKey(0)
+			elif gray_mode:
+				gray = np.abs(np.asarray(img_l, np.int) - img_r)
+				result = gray.astype(np.uint8)
+				fig = KaisCanvas(fig_size = (10, 5.7), linewidth = 1, dark_mode = False)
+				fig.histogram(np.ravel(gray), 2, force_delta = True, show_fit = False)
+				fig.set_axis(equal_axis = False)
+				path = folder_out + "hist_gray.png"
+				fig.save(path)
+				hist = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+				cv2.imshow("hist", hist)
 			else:
 				result = np.concatenate((img_l, img_r), axis = 1)[::2, ::4]
 				result[25::56, :, 1] = 200
 			cv2.imshow("cam", result)
 		else: print(">> camera short circuit")
 
-		key = cv2.waitKey(1)
 		if key == 27: break
 		if key == ord("m"): mix_image = not mix_image
 		if key == ord("s"): shot_frame = True
+		if key == ord("g"): gray_mode = True
 
 		fps = loop / (time.time() - t0)
 		print(f"{loop}, fps = {fps:.1f}")
