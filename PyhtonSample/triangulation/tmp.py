@@ -1,8 +1,8 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy.spatial import Delaunay
 
-from A_core.A_02_func import KaisFunc
+from Core.Geometry import is_CCW_2d
 
 
 def main():
@@ -12,10 +12,10 @@ def main():
 
 	simplices = []
 	tri.simplices.sort(axis = 1)
-	tri.simplices.sort(axis = 0)
+	# tri.simplices.sort(axis = 0)
 	for idx in tri.simplices:
 		P3 = points[idx]
-		if KaisFunc.is_CCW(P3): continue
+		if not is_CCW_2d(P3): continue
 		simplices.append(idx)
 
 	plt.triplot(points[:, 0], points[:, 1], tri.simplices, zorder = 10)
