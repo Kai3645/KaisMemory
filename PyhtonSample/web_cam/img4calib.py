@@ -16,18 +16,19 @@ if __name__ == '__main__':
 	IMAGE_H = 720
 	IMAGE_SHAPE = (IMAGE_W, IMAGE_H)
 	AREA_RATIO_MAX = 0.40
-	AREA_RATIO_MIN = 0.15
+	AREA_RATIO_MIN = 0.25
 
-	cap = cv2.VideoCapture(0)
+	cap = cv2.VideoCapture(2)
 	if cap.isOpened(): print(">> cameras start ..")
 	else: err_exit(">> err, can not open camera ..")
 
 
 	def process(image):
-		gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+		# gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+		gray = image[:, :, 2]
 		binary = gray2binary(gray)
 		corners = chessboard_corner_detect(gray, BOARD_SHAPE, binary)
-		if corners is None: return False, image
+		if corners is None: return False, binary
 
 		area_ratio = chessboard_area_ratio(corners, BOARD_SHAPE, IMAGE_SHAPE)
 		if area_ratio < AREA_RATIO_MIN or area_ratio > AREA_RATIO_MAX:
@@ -42,10 +43,10 @@ if __name__ == '__main__':
 		ret, img = cap.read()
 		if ret:
 			ret, img = process(img)
-			cv2.imshow("cam", img)
+			cv2.imshow("cam", img[::3, ::3])
 			if ret and shooting:
 				cv2.imwrite(folder + f"{loop:05d}.jpg", img)
-
+		else: print(">> camera short circuit")
 		key = cv2.waitKey(1)
 		if key == 27: break
 		if key == ord("s"): shooting = not shooting
