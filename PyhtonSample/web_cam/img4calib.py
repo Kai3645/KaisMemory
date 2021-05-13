@@ -24,8 +24,7 @@ if __name__ == '__main__':
 
 
 	def process(image):
-		# gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-		gray = image[:, :, 2]
+		gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 		binary = gray2binary(gray)
 		corners = chessboard_corner_detect(gray, BOARD_SHAPE, binary)
 		if corners is None: return False, binary
@@ -42,14 +41,16 @@ if __name__ == '__main__':
 	while True:
 		ret, img = cap.read()
 		if ret:
-			ret, img = process(img)
-			cv2.imshow("cam", img[::3, ::3])
+			ret, dst = process(img)
+			cv2.imshow("cam", dst[::3, ::3])
 			if ret and shooting:
 				cv2.imwrite(folder + f"{loop:05d}.jpg", img)
 		else: print(">> camera short circuit")
 		key = cv2.waitKey(1)
 		if key == 27: break
-		if key == ord("s"): shooting = not shooting
+		if key == ord("s"):
+			shooting = not shooting
+			print("start shooting")
 
 		loop += 1
 		dt = time.time() - t0
